@@ -76,7 +76,8 @@ async fn process_feed(
 
     let mut failed = BTreeSet::new();
     for entry in to_post {
-        let content = discord::render(&channel.template, &fetched.title, entry);
+        let feed_title = feed.title.as_deref().unwrap_or(&fetched.title);
+        let content = discord::render(&channel.template, feed_title, entry);
         if dry_run {
             println!("--- #{}\n{content}", feed.channel);
         } else if let Err(err) = discord::post(client, channel, &content).await {

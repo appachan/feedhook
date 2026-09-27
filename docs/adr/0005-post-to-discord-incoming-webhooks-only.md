@@ -14,7 +14,7 @@ Accepted
 
 投稿先を Discord の Incoming Webhook に限定し、送り先を抽象化しない。設定のキー名(`discord_webhook`)などで Discord 用であることを明示する。
 
-- メッセージはチャンネルごとのテンプレート(`{title}` `{link}` `{description}` `{feed_title}`)を展開して作る。`description` は記事の HTML をテキストに変換したもの
+- メッセージはチャンネルごとのテンプレート(`{title}` `{link}` `{description}` `{feed_title}`)を展開して作る。`description` は記事の HTML をテキストに変換したもの。`feed_title` は、フィードの XML に書かれたフィード全体の名前(RSS の `<channel>` 直下の `<title>`、Atom の `<feed>` 直下の `<title>`)。ただし、設定ファイルの `[[feeds]]` で `title` を指定すれば、そちらを使う(フィードの XML に書かれた名前は「fastly rss feed」「Akamai Status - Incident History」のように、投稿に向かないことが多いため)
 - メッセージが 2000 文字を超える場合は、末尾を切り詰めて `…` を付ける
 - `allowed_mentions` を `{"parse": []}` にして、記事中の `@everyone` などでメンションが飛ばないようにする
 - 429 が返ったら、レスポンスの `retry_after`(秒)だけ待って再送する。再送の回数には上限を設ける

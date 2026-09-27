@@ -25,3 +25,5 @@ channel = "news"
 [[feeds]]
 url = "https://status.example.com/rss"
 channel = "alerts"
+# Optional. Used as {feed_title} instead of the feed's <title> (the name of the whole feed).
+title = "Example Status"

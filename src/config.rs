@@ -31,6 +31,8 @@ pub struct Channel {
 pub struct Feed {
     pub url: String,
     pub channel: String,
+    /// Used as `{feed_title}` instead of the feed's `<title>` (the one of the whole feed, not of an entry).
+    pub title: Option<String>,
 }
 
 fn default_state_path() -> PathBuf {
@@ -93,6 +95,7 @@ mod tests {
         assert_eq!(config.max_age_hours, 24);
         assert_eq!(config.feeds.len(), 1);
         assert_eq!(config.channels["news"].username, None);
+        assert_eq!(config.feeds[0].title, None);
     }
 
     #[test]
