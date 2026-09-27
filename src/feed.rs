@@ -12,8 +12,8 @@ pub struct Entry {
     pub id: String,
     pub title: String,
     pub link: String,
-    /// Plain text converted from the summary (or the content) HTML.
-    pub description: String,
+    /// HTML of the summary, or of the content if the entry has no summary.
+    pub description_html: String,
     /// The published date, or the updated date if the entry has none.
     pub date: Option<DateTime<Utc>>,
 }
@@ -32,15 +32,14 @@ pub async fn fetch(client: &reqwest::Client, url: &str) -> Result<Fetched> {
 fn parse(url: &str, body: &[u8]) -> Result<Fetched> {
     let parser = feed_rs::parser::Builder::new()
         .base_uri(Some(url))
-        .id_generator(|links, title, uri| {
-            // With base_uri set, feed-rs falls back to a random UUID only when there is neither
-            // a link nor a title. Such an ID would change on every run, so leave it empty
-            // instead to skip the entry.
-            if links.is_empty() && title.is_none() {
-                String::new()
-            } else {
-                feed_rs::parser::generate_id(links, title, uri)
+        .id_generator(|links, title, uri| match (links.first(), title, uri) {
+            (Some(link), _, _) => feed_rs::parser::generate_id_from_link_and_title(link, title),
+            (None, Some(title), Some(uri)) => {
+                feed_rs::parser::generate_id_from_uri_and_title(uri, title)
             }
+            // feed-rs would fall back to a random ID, which changes on every run.
+            // Leave it empty instead so that the entry is skipped.
+            _ => String::new(),
         })
         .build();
     let feed = parser.parse(body)?;
@@ -49,19 +48,16 @@ fn parse(url: &str, body: &[u8]) -> Result<Fetched> {
         .entries
         .into_iter()
         .filter(|entry| !entry.id.is_empty())
-        .map(|entry| {
-            let html = entry
+        .map(|entry| Entry {
+            id: entry.id,
+            title: entry.title.map(|title| title.content).unwrap_or_default(),
+            link: article_link(&entry.links),
+            description_html: entry
                 .summary
                 .map(|summary| summary.content)
                 .or_else(|| entry.content.and_then(|content| content.body))
-                .unwrap_or_default();
-            Entry {
-                id: entry.id,
-                title: entry.title.map(|title| title.content).unwrap_or_default(),
-                link: article_link(&entry.links),
-                description: html_to_text(&html),
-                date: entry.published.or(entry.updated),
-            }
+                .unwrap_or_default(),
+            date: entry.published.or(entry.updated),
         })
         .collect();
 
@@ -82,14 +78,6 @@ fn article_link(links: &[feed_rs::model::Link]) -> String {
         .or(links.first())
         .map(|link| link.href.clone())
         .unwrap_or_default()
-}
-
-fn html_to_text(html: &str) -> String {
-    // Discord wraps lines by itself, so render without wrapping.
-    html2text::config::plain_no_decorate()
-        .string_from_read(html.as_bytes(), usize::MAX)
-        .map(|text| text.trim().to_string())
-        .unwrap_or_else(|_| html.to_string())
 }
 
 /// Returns the entries to post, oldest first.
@@ -113,6 +101,18 @@ pub fn entries_to_post<'a>(
     new_entries
 }
 
+/// Returns the IDs to remember as seen: every entry currently in the feed except the ones that
+/// failed to post, which are retried on the next run.
+///
+/// The result replaces the previous set, so IDs gone from the feed do not pile up.
+pub fn seen_ids(entries: &[Entry], failed: &BTreeSet<&str>) -> BTreeSet<String> {
+    entries
+        .iter()
+        .filter(|entry| !failed.contains(entry.id.as_str()))
+        .map(|entry| entry.id.clone())
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -122,18 +122,18 @@ mod tests {
         Utc.with_ymd_and_hms(2026, 9, 27, hour, 0, 0).unwrap()
     }
 
+    fn entry(id: &str, date: Option<DateTime<Utc>>) -> Entry {
+        Entry {
+            id: id.to_string(),
+            title: String::new(),
+            link: String::new(),
+            description_html: String::new(),
+            date,
+        }
+    }
+
     mod entries_to_post {
         use super::*;
-
-        fn entry(id: &str, date: Option<DateTime<Utc>>) -> Entry {
-            Entry {
-                id: id.to_string(),
-                title: String::new(),
-                link: String::new(),
-                description: String::new(),
-                date,
-            }
-        }
 
         fn ids(entries: Vec<&Entry>) -> Vec<&str> {
             entries.iter().map(|entry| entry.id.as_str()).collect()
@@ -173,11 +173,25 @@ mod tests {
         }
     }
 
+    mod seen_ids {
+        use super::*;
+
+        #[test]
+        fn keeps_current_entries_except_failed_ones() {
+            let entries = vec![entry("posted", None), entry("failed", None)];
+            let failed = BTreeSet::from(["failed"]);
+            assert_eq!(
+                seen_ids(&entries, &failed),
+                BTreeSet::from(["posted".to_string()])
+            );
+        }
+    }
+
     mod parse {
         use super::*;
 
         #[test]
-        fn parses_rss_and_converts_description_to_text() {
+        fn parses_rss() {
             let rss = r#"<?xml version="1.0"?>
             <rss version="2.0"><channel><title>Status</title>
               <item>
@@ -193,7 +207,10 @@ mod tests {
             let entry = &fetched.entries[0];
             assert_eq!(entry.id, "incident-1");
             assert_eq!(entry.link, "https://example.com/incidents/1");
-            assert_eq!(entry.description, "Investigating elevated errors.");
+            assert_eq!(
+                entry.description_html,
+                "<p>Investigating <b>elevated</b> errors.</p>"
+            );
             assert_eq!(entry.date, Some(at(12)));
         }
 

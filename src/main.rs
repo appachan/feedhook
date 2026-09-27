@@ -82,22 +82,18 @@ async fn process_feed(
         } else if let Err(err) = discord::post(client, channel, &content).await {
             // Leave it unseen so that it is retried on the next run.
             eprintln!("{}: failed to post {}: {err:#}", feed.url, entry.link);
-            failed.insert(&entry.id);
+            failed.insert(entry.id.as_str());
         }
     }
     if dry_run {
         return Ok(());
     }
 
-    // Replace rather than extend, so that IDs gone from the feed do not pile up.
-    let seen = fetched
-        .entries
-        .iter()
-        .filter(|entry| !failed.contains(&entry.id))
-        .map(|entry| entry.id.clone())
-        .collect();
-    state.insert(feed.url.clone(), seen);
-    state::save(&config.state_path, state)?;
+    let seen = feed::seen_ids(&fetched.entries, &failed);
+    if state.get(&feed.url) != Some(&seen) {
+        state.insert(feed.url.clone(), seen);
+        state::save(&config.state_path, state)?;
+    }
     ensure!(failed.is_empty(), "failed to post {} entries", failed.len());
     Ok(())
 }

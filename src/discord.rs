@@ -10,13 +10,15 @@ const MAX_CONTENT_CHARS: usize = 2000;
 const MAX_ATTEMPTS: usize = 3;
 
 /// Expands `{title}`, `{link}`, `{description}` and `{feed_title}` in the template.
+/// `{description}` is the entry's HTML converted to plain text.
 ///
 /// The template is scanned once, so placeholders contained in the values are left as they are.
 pub fn render(template: &str, feed_title: &str, entry: &Entry) -> String {
+    let description = html_to_text(&entry.description_html);
     let lookup = |key: &str| match key {
         "title" => Some(entry.title.as_str()),
         "link" => Some(entry.link.as_str()),
-        "description" => Some(entry.description.as_str()),
+        "description" => Some(description.as_str()),
         "feed_title" => Some(feed_title),
         _ => None,
     };
@@ -42,6 +44,17 @@ pub fn render(template: &str, feed_title: &str, entry: &Entry) -> String {
     }
     out.push_str(rest);
     truncate(out, MAX_CONTENT_CHARS)
+}
+
+fn html_to_text(html: &str) -> String {
+    // Discord wraps lines by itself, so render without wrapping. If html2text cannot render the
+    // HTML, say so in the message instead of posting raw HTML.
+    html2text::config::plain_no_decorate()
+        .string_from_read(html.as_bytes(), usize::MAX)
+        .map(|text| text.trim().to_string())
+        .unwrap_or_else(|err| {
+            format!("(feedhook: failed to convert the description to text: {err})")
+        })
 }
 
 fn truncate(text: String, max_chars: usize) -> String {
@@ -112,12 +125,12 @@ mod tests {
     mod render {
         use super::*;
 
-        fn entry(title: &str, description: &str) -> Entry {
+        fn entry(title: &str, description_html: &str) -> Entry {
             Entry {
                 id: "id".to_string(),
                 title: title.to_string(),
                 link: "https://example.com/1".to_string(),
-                description: description.to_string(),
+                description_html: description_html.to_string(),
                 date: None,
             }
         }
@@ -127,11 +140,11 @@ mod tests {
             let text = render(
                 "🚨 **{feed_title} | {title}**\n\n{link}\n\n{description}",
                 "Status",
-                &entry("Incident", "Investigating"),
+                &entry("Incident", "<p>Investigating <b>elevated</b> errors.</p>"),
             );
             assert_eq!(
                 text,
-                "🚨 **Status | Incident**\n\nhttps://example.com/1\n\nInvestigating"
+                "🚨 **Status | Incident**\n\nhttps://example.com/1\n\nInvestigating elevated errors."
             );
         }
 
