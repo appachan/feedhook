@@ -1,0 +1,27 @@
+# Copy to config.toml and fill in the webhook URLs. config.toml is not tracked by git.
+
+# Relative to the directory of this file.
+state_path = "state.json"
+# Entries published earlier than this are never posted.
+max_age_hours = 24
+
+# Create a webhook in the channel settings: Integrations > Webhooks.
+[channels.news]
+discord_webhook = "https://discord.com/api/webhooks/..."
+# Placeholders: {title}, {link}, {description}, {feed_title}
+template = "📰 | **{title}**\n\n{link}"
+# Optional. The name and icon set on the webhook are used by default.
+# username = "feedhook"
+# avatar_url = "https://example.com/icon.png"
+
+[channels.alerts]
+discord_webhook = "https://discord.com/api/webhooks/..."
+template = "🚨 **{feed_title} | {title}**\n\n{link}\n\n{description}"
+
+[[feeds]]
+url = "https://blog.example.com/feed.xml"
+channel = "news"
+
+[[feeds]]
+url = "https://status.example.com/rss"
+channel = "alerts"

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mise exec -- cargo build *)",
+      "Bash(mise exec -- cargo check *)",
+      "Bash(mise exec -- cargo test *)",
+      "Bash(mise exec -- cargo clippy *)",
+      "Bash(mise exec -- cargo fmt *)",
+      "Bash(mise exec -- cargo tree *)"
+    ]
+  }
+}
