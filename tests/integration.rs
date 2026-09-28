@@ -31,6 +31,7 @@ async fn posts_only_entries_added_after_the_first_run() {
         "posts_only_new",
         &format!("{}/feed.xml", server.uri()),
         &format!("{}/webhook", server.uri()),
+        "feedhook test",
     );
 
     serve_feed(&server, atom(&[old_entry()])).await;
@@ -46,6 +47,7 @@ async fn posts_only_entries_added_after_the_first_run() {
         posts(&server).await,
         [json!({
             "content": "New entry https://example.com/new",
+            "username": "feedhook test",
             "allowed_mentions": { "parse": [] },
         })]
     );
@@ -58,6 +60,7 @@ async fn retries_after_rate_limit() {
         "retries",
         &format!("{}/feed.xml", server.uri()),
         &format!("{}/webhook", server.uri()),
+        "feedhook test",
     );
     serve_feed(&server, atom(&[old_entry()])).await;
     run_feedhook(&config);

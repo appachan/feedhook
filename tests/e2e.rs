@@ -14,7 +14,13 @@ async fn posts_new_entry_to_discord() {
         .filter(|url| !url.is_empty())
         .expect("FEEDHOOK_E2E_WEBHOOK is not set");
     let server = MockServer::start().await;
-    let config = write_config("e2e", &format!("{}/feed.xml", server.uri()), &webhook);
+    // The username makes the posts recognizable as e2e ones in Discord.
+    let config = write_config(
+        "e2e",
+        &format!("{}/feed.xml", server.uri()),
+        &webhook,
+        "feedhook e2e",
+    );
 
     serve_feed(&server, atom(&[old_entry()])).await;
     run_feedhook(&config);
