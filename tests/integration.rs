@@ -1,17 +1,9 @@
 mod common;
 
-use common::{atom, new_entry, old_entry, run_feedhook, write_config};
+use common::{atom, new_entry, old_entry, run_feedhook, serve_feed, write_config};
 use serde_json::{Value, json};
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
-
-async fn serve_feed(server: &MockServer, feed: String) {
-    Mock::given(method("GET"))
-        .and(path("/feed.xml"))
-        .respond_with(ResponseTemplate::new(200).set_body_string(feed))
-        .mount(server)
-        .await;
-}
 
 async fn accept_posts(server: &MockServer) {
     Mock::given(method("POST"))
@@ -39,6 +31,7 @@ async fn posts_only_entries_added_after_the_first_run() {
         "posts_only_new",
         &format!("{}/feed.xml", server.uri()),
         &format!("{}/webhook", server.uri()),
+        "feedhook test",
     );
 
     serve_feed(&server, atom(&[old_entry()])).await;
@@ -54,6 +47,7 @@ async fn posts_only_entries_added_after_the_first_run() {
         posts(&server).await,
         [json!({
             "content": "New entry https://example.com/new",
+            "username": "feedhook test",
             "allowed_mentions": { "parse": [] },
         })]
     );
@@ -66,6 +60,7 @@ async fn retries_after_rate_limit() {
         "retries",
         &format!("{}/feed.xml", server.uri()),
         &format!("{}/webhook", server.uri()),
+        "feedhook test",
     );
     serve_feed(&server, atom(&[old_entry()])).await;
     run_feedhook(&config);

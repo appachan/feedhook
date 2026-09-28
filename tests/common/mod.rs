@@ -3,6 +3,8 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
 use chrono::{DateTime, TimeDelta, Utc};
+use wiremock::matchers::{method, path};
+use wiremock::{Mock, MockServer, ResponseTemplate};
 
 pub struct TestEntry {
     pub id: &'static str,
@@ -44,8 +46,17 @@ pub fn atom(entries: &[TestEntry]) -> String {
     )
 }
 
+pub async fn serve_feed(server: &MockServer, feed: String) {
+    Mock::given(method("GET"))
+        .and(path("/feed.xml"))
+        .respond_with(ResponseTemplate::new(200).set_body_string(feed))
+        .mount(server)
+        .await;
+}
+
 /// Creates an empty directory for the test and writes `config.toml` into it.
-pub fn write_config(test_name: &str, feed_url: &str, webhook_url: &str) -> PathBuf {
+/// `username` is shown as the author of the posts in Discord.
+pub fn write_config(test_name: &str, feed_url: &str, webhook_url: &str, username: &str) -> PathBuf {
     let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(test_name);
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -57,6 +68,7 @@ pub fn write_config(test_name: &str, feed_url: &str, webhook_url: &str) -> PathB
 [channels.test]
 discord_webhook = "{webhook_url}"
 template = "{{title}} {{link}}"
+username = "{username}"
 
 [[feeds]]
 url = "{feed_url}"
