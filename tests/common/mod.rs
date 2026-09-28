@@ -3,6 +3,8 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
 use chrono::{DateTime, TimeDelta, Utc};
+use wiremock::matchers::{method, path};
+use wiremock::{Mock, MockServer, ResponseTemplate};
 
 pub struct TestEntry {
     pub id: &'static str,
@@ -42,6 +44,14 @@ pub fn atom(entries: &[TestEntry]) -> String {
     format!(
         "<?xml version=\"1.0\"?><feed xmlns=\"http://www.w3.org/2005/Atom\"><title>Test feed</title>{entries}</feed>"
     )
+}
+
+pub async fn serve_feed(server: &MockServer, feed: String) {
+    Mock::given(method("GET"))
+        .and(path("/feed.xml"))
+        .respond_with(ResponseTemplate::new(200).set_body_string(feed))
+        .mount(server)
+        .await;
 }
 
 /// Creates an empty directory for the test and writes `config.toml` into it.

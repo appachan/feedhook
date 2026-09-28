@@ -1,17 +1,9 @@
 mod common;
 
-use common::{atom, new_entry, old_entry, run_feedhook, write_config};
+use common::{atom, new_entry, old_entry, run_feedhook, serve_feed, write_config};
 use serde_json::{Value, json};
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
-
-async fn serve_feed(server: &MockServer, feed: String) {
-    Mock::given(method("GET"))
-        .and(path("/feed.xml"))
-        .respond_with(ResponseTemplate::new(200).set_body_string(feed))
-        .mount(server)
-        .await;
-}
 
 async fn accept_posts(server: &MockServer) {
     Mock::given(method("POST"))
