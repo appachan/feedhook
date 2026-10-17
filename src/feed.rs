@@ -236,17 +236,26 @@ mod tests {
         }
 
         #[test]
-        fn generates_stable_ids_and_skips_entries_without_link_and_title() {
+        fn generates_fixed_ids_and_skips_entries_without_link_and_title() {
             let rss = r#"<?xml version="1.0"?>
             <rss version="2.0"><channel><title>Blog</title>
-              <item><title>No guid</title><link>https://example.com/posts/1</link></item>
+              <item><title>With link</title><link>https://example.com/posts/1</link></item>
+              <item><title>Without link</title></item>
               <item><description>Neither link nor title</description></item>
             </channel></rss>"#;
-            let first = parse("https://example.com/rss", rss.as_bytes()).unwrap();
-            let second = parse("https://example.com/rss", rss.as_bytes()).unwrap();
-            assert_eq!(first.entries.len(), 1);
-            assert!(!first.entries[0].id.is_empty());
-            assert_eq!(first.entries[0].id, second.entries[0].id);
+            let fetched = parse("https://example.com/rss", rss.as_bytes()).unwrap();
+            let ids: Vec<&str> = fetched
+                .entries
+                .iter()
+                .map(|entry| entry.id.as_str())
+                .collect();
+            assert_eq!(
+                ids,
+                [
+                    "604627b5ee94c2d139fdfcf9d2bc9cc7",
+                    "d368aea27427518f8a98997f62798cdc"
+                ]
+            );
         }
     }
 }
