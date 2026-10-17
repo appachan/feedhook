@@ -1,5 +1,7 @@
 name: E2E
 
+# Not run on pushes to main: Dependabot auto-merges with GITHUB_TOKEN, which does not trigger
+# workflows, so most changes would skip it anyway. Run it by hand before a release instead.
 on:
   workflow_dispatch:
   schedule:
