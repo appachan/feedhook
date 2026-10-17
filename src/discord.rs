@@ -13,6 +13,8 @@ const MAX_ATTEMPTS: usize = 3;
 /// `{description}` is the entry's HTML converted to plain text.
 ///
 /// The template is scanned once, so placeholders contained in the values are left as they are.
+/// The values are not escaped either, so Discord renders any Markdown in them, e.g. `**` or
+/// `[text](url)` in a title. Mentions are disabled separately when posting.
 pub fn render(template: &str, feed_title: &str, entry: &Entry) -> String {
     let description = html_to_text(&entry.description_html);
     let lookup = |key: &str| match key {
