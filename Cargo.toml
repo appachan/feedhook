@@ -8,7 +8,7 @@ license = "MIT"
 anyhow = "1.0.104"
 chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 clap = { version = "4.6.7", features = ["derive"] }
-feed-rs = "2.4"
+feed-rs = "3.0"
 html2text = "0.17.1"
 reqwest = { version = "0.13.5", features = ["json"] }
 serde = { version = "1.0.229", features = ["derive"] }
