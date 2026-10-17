@@ -79,10 +79,14 @@ async fn process_feed(
         let feed_title = feed.title.as_deref().unwrap_or(&fetched.title);
         let content = discord::render(&channel.template, feed_title, entry);
         if dry_run {
-            println!("--- #{}\n{content}", feed.channel);
+            println!("--- #{}\n{}", feed.channel, escape_control(&content));
         } else if let Err(err) = discord::post(client, channel, &content).await {
             // Leave it unseen so that it is retried on the next run.
-            eprintln!("{}: failed to post {}: {err:#}", feed.url, entry.link);
+            eprintln!(
+                "{}: failed to post {}: {err:#}",
+                feed.url,
+                escape_control(&entry.link)
+            );
             failed.insert(entry.id.as_str());
         }
     }
@@ -97,4 +101,29 @@ async fn process_feed(
     }
     ensure!(failed.is_empty(), "failed to post {} entries", failed.len());
     Ok(())
+}
+
+/// Escapes control characters other than newlines and tabs, so that text from a feed cannot
+/// send escape sequences to the terminal.
+fn escape_control(text: &str) -> String {
+    text.chars()
+        .map(|c| match c {
+            '\n' | '\t' => c.to_string(),
+            c if c.is_control() => c.escape_default().to_string(),
+            c => c.to_string(),
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn escapes_control_characters_except_newline_and_tab() {
+        assert_eq!(
+            escape_control("\u{1b}]0;x\u{7}\r\u{9b}a\n\tb"),
+            "\\u{1b}]0;x\\u{7}\\r\\u{9b}a\n\tb"
+        );
+    }
 }
