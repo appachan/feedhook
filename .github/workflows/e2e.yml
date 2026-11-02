@@ -16,11 +16,11 @@ jobs:
     runs-on: ubuntu-latest
     environment: e2e
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde # v5.2.1
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.2.1
         with:
           minimum_release_age: 7d
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: Swatinem/rust-cache@v2.9.2
       - run: cargo test --locked --test e2e -- --ignored
         env:
           FEEDHOOK_E2E_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
