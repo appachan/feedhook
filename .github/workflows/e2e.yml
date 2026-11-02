@@ -20,7 +20,7 @@ jobs:
       - uses: jdx/mise-action@v5.2.1
         with:
           minimum_release_age: 7d
-      - uses: Swatinem/rust-cache@v2.9.2
+      - uses: Swatinem/rust-cache@v2.9.3
       - run: cargo test --locked --test e2e -- --ignored
         env:
           FEEDHOOK_E2E_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
