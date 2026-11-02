@@ -13,8 +13,8 @@ jobs:
     env:
       TARGET: x86_64-unknown-linux-musl
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde # v5.2.1
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.2.1
         with:
           minimum_release_age: 7d
       - name: Check that the tag matches the package version
